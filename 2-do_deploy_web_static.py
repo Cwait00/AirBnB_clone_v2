@@ -1,4 +1,4 @@
-from fabric.api import env, put, run, local
+from fabric.api import env, put, run
 from os.path import exists
 
 env.hosts = ['172.17.0.3', 'WEB_01_IP_PLACEHOLDER', 'WEB_02_IP_PLACEHOLDER']
@@ -7,14 +7,20 @@ env.key_filename = '/root/.ssh/id_rsa'  # Use the full path to your private key
 def do_deploy(archive_path):
     """Distributes an archive to your web servers."""
     if not exists(archive_path):
+        print("Error: Archive file does not exist.")
         return False
 
-    file_name = archive_path.split('/')[-1]
-    folder_name = file_name.split('.')[0]
-
     try:
+        # Print debugging information
+        print("Uploading the archive to the /tmp/ directory of the web server...")
+        print('env.key_filename: {}'.format(env.key_filename))
+
         # Upload the archive to the /tmp/ directory of the web server
-        put(archive_path, "/tmp/{}".format(file_name))
+        put(archive_path, "/tmp/")
+
+        # Extract file and folder names
+        file_name = archive_path.split('/')[-1]
+        folder_name = file_name.split('.')[0]
 
         # Create the release folder
         run("mkdir -p /data/web_static/releases/{}/".format(folder_name))
@@ -34,8 +40,8 @@ def do_deploy(archive_path):
         # Create a new symbolic link
         run("ln -s /data/web_static/releases/{}/ /data/web_static/current".format(folder_name))
 
-        print("New version deployed!")
+        print("New version deployed successfully!")
         return True
     except Exception as e:
-        print(e)
+        print("Error:", str(e))
         return False
