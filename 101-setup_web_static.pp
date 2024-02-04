@@ -1,31 +1,32 @@
-# Puppet script to set up web_static
+# Puppet script to set up web_static deployment on web servers
 
-# Set up /data directory with the right permissions
+# Ensure /data directory exists with the correct permissions
 file { '/data':
   ensure => 'directory',
-  mode   => '755',
+  owner  => 'ubuntu',
+  group  => 'ubuntu',
+  mode   => '0755',
 }
 
-# Set up /data/web_static directory with the right permissions
+# Ensure /data/web_static directory exists with the correct permissions
 file { '/data/web_static':
   ensure => 'directory',
-  mode   => '755',
+  owner  => 'root',
+  group  => 'root',
+  mode   => '0755',
 }
 
-# Set up /data/web_static/releases directory with the right permissions
+# Ensure /data/web_static/releases directory exists with the correct permissions
 file { '/data/web_static/releases':
   ensure => 'directory',
-  mode   => '755',
+  owner  => 'root',
+  group  => 'root',
+  mode   => '0755',
 }
 
-# Set up /data/web_static/releases/test directory with the right permissions
-file { '/data/web_static/releases/test':
-  ensure => 'directory',
-  mode   => '755',
-}
-
-# Create /data/web_static/releases/test/index.html with the right permissions
+# Ensure /data/web_static/releases/test/index.html exists with the correct permissions
 file { '/data/web_static/releases/test/index.html':
+  ensure => 'file',
   content => '<html>
   <head>
   </head>
@@ -33,16 +34,56 @@ file { '/data/web_static/releases/test/index.html':
     Holberton School
   </body>
 </html>',
-  mode    => '644',
+  owner  => 'root',
+  group  => 'root',
+  mode   => '0644',
 }
 
-# Create a symbolic link to /data/web_static/releases/test
+# Ensure /data/web_static/current exists
 file { '/data/web_static/current':
   ensure => 'link',
   target => '/data/web_static/releases/test',
+  owner  => 'root',
+  group  => 'root',
 }
 
-# Notify that everything is set up
-notify { 'Web_Static_Setup_Complete':
-  message => 'Web_Static setup completed successfully.',
+# Ensure Nginx configuration is updated
+file { '/etc/nginx/sites-available/default':
+  ensure => 'file',
+  content => "server {
+    listen 80 default_server;
+    listen [::]:80 default_server;
+
+    server_name _;
+
+    location /hbnb_static {
+        alias /data/web_static/current;
+        index index.html index.htm;
+    }
+
+    location / {
+        add_header X-Served-By $hostname;
+        proxy_pass http://127.0.0.1:5000;
+    }
+
+    error_page 404 /404.html;
+    location /404 {
+        root /usr/share/nginx/html;
+        internal;
+    }
+
+    location /redirect_me {
+        rewrite ^/redirect_me /;
+        rewrite ^/redirect_me /;
+    }
+}
+",
+  notify => Service['nginx'],
+}
+
+# Notify Nginx to restart if the configuration is updated
+service { 'nginx':
+  ensure  => 'running',
+  enable  => true,
+  require => File['/etc/nginx/sites-available/default'],
 }
