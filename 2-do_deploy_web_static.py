@@ -10,6 +10,7 @@ from os.path import exists
 env.hosts = ['172.17.0.3', 'WEB_01_IP_PLACEHOLDER', 'WEB_02_IP_PLACEHOLDER']
 env.key_filename = '/root/.ssh/id_rsa'  # Use the full path to your private key
 
+
 def do_deploy(archive_path):
     """
     Deploy the web_static content to the web servers.
@@ -57,5 +58,19 @@ def do_deploy(archive_path):
         print("Error:", str(e))
         return False
 
+
+def check_status():
+    """
+    Check if hbnb_static/0-index.html is available on both web servers.
+    """
+    for host in env.hosts:
+        status_code = run("curl -s -o /dev/null -w '%{http_code}' http://{}/hbnb_static/0-index.html".format(host))
+        if status_code == '200':
+            print("hbnb_static/0-index.html is available on", host)
+        else:
+            print("hbnb_static/0-index.html is not available on", host)
+
+
 # Example usage:
 # do_deploy('path/to/your/archive.tgz')
+# check_status()
