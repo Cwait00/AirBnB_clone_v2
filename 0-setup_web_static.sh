@@ -1,35 +1,62 @@
 #!/usr/bin/env bash
-# Script that sets up web servers for deployment of web_static
+# Sets up a web server for deployment of web_static.
 
-# Install Nginx if not already installed
-sudo apt-get update
-sudo apt-get -y install nginx
+# Check if Nginx is installed, if not, install it
+if ! command -v nginx &> /dev/null; then
+    apt-get update
+    apt-get install -y nginx
+fi
 
-# Create necessary folders if they don't exist
-sudo mkdir -p /data/web_static/releases/test/
-sudo mkdir -p /data/web_static/shared/
-sudo mkdir -p /data/web_static/current/
+# Create necessary directories
+mkdir -p /data/web_static/releases/test/
+mkdir -p /data/web_static/shared/
 
-# Create a fake HTML file
-echo "<html>
-  <head>
-  </head>
-  <body>
-    Holberton School
-  </body>
-</html>" | sudo tee /data/web_static/releases/test/index.html > /dev/null
+# Create fake HTML file for testing Nginx configuration
+echo "Holberton School" > /data/web_static/releases/test/index.html
 
-# Create or recreate the symbolic link
-sudo ln -sf /data/web_static/releases/test/ /data/web_static/current
+# Check if symbolic link exists, recreate if necessary
+if [ -L /data/web_static/current ]; then
+    rm /data/web_static/current
+fi
+ln -s /data/web_static/releases/test/ /data/web_static/current
 
-# Give ownership of the /data/ folder to the ubuntu user and group recursively
-sudo chown -R ubuntu:ubuntu /data/
+# Set ownership and permissions recursively
+chown -R ubuntu:ubuntu /data/
+chmod -R 755 /data/
 
 # Update Nginx configuration
-config_file="/etc/nginx/sites-available/default"
-sudo sed -i "29i \\\tlocation /hbnb_static/ {\n\t\talias /data/web_static/current/;\n\t}" "$config_file"
+printf %s "server {
+    listen 80 default_server;
+    listen [::]:80 default_server;
+    add_header X-Served-By $HOSTNAME;
+    root   /var/www/html;
+    index  index.html index.htm;
+
+    location /hbnb_static {
+        alias /data/web_static/current/;
+        index index.html index.htm;
+    }
+
+    location /redirect_me {
+        return 301 http://cuberule.com/;
+    }
+
+    error_page 404 /404.html;
+    location /404 {
+        root /var/www/html;
+        internal;
+    }
+}" > /etc/nginx/sites-available/default
 
 # Restart Nginx
-sudo service nginx restart
+service nginx restart
 
+# Test Nginx configuration
+response_code=$(curl -s -o /dev/null -w "%{http_code}" http://localhost/hbnb_static/index.html)
+if [ "$response_code" != "200" ]; then
+    echo "Error: Nginx configuration not updated successfully"
+    exit 1
+fi
+
+# Exit successfully
 exit 0
