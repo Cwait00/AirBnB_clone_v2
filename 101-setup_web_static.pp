@@ -1,32 +1,50 @@
-# Puppet script to set up web_static deployment on web servers
+# Ensure Nginx is installed
+package { 'nginx':
+  ensure => installed,
+}
 
-# Ensure /data directory exists with the correct permissions
+# Create necessary directories
 file { '/data':
-  ensure => 'directory',
-  owner  => 'ubuntu',
-  group  => 'ubuntu',
-  mode   => '0755',
+  ensure  => 'directory',
+  owner   => 'ubuntu',  # Correct ownership to ubuntu
+  group   => 'ubuntu',  # Correct group to ubuntu
+  mode    => '0755',
 }
 
-# Ensure /data/web_static directory exists with the correct permissions
 file { '/data/web_static':
-  ensure => 'directory',
-  owner  => 'root',
-  group  => 'root',
-  mode   => '0755',
+  ensure  => 'directory',
+  owner   => 'ubuntu',  # Correct ownership to ubuntu
+  group   => 'ubuntu',  # Correct group to ubuntu
+  mode    => '0755',
 }
 
-# Ensure /data/web_static/releases directory exists with the correct permissions
 file { '/data/web_static/releases':
-  ensure => 'directory',
-  owner  => 'root',
-  group  => 'root',
-  mode   => '0755',
+  ensure  => 'directory',
+  owner   => 'ubuntu',  # Correct ownership to ubuntu
+  group   => 'ubuntu',  # Correct group to ubuntu
+  mode    => '0755',
 }
 
-# Ensure /data/web_static/releases/test/index.html exists with the correct permissions
+file { '/data/web_static/shared':
+  ensure  => 'directory',
+  owner   => 'ubuntu',  # Correct ownership to ubuntu
+  group   => 'ubuntu',  # Correct group to ubuntu
+  mode    => '0755',
+}
+
+file { '/data/web_static/releases/test':
+  ensure  => 'directory',
+  owner   => 'ubuntu',  # Correct ownership to ubuntu
+  group   => 'ubuntu',  # Correct group to ubuntu
+  mode    => '0755',
+}
+
+# Create fake HTML file for testing
 file { '/data/web_static/releases/test/index.html':
-  ensure => 'file',
+  ensure  => 'file',
+  owner   => 'ubuntu',  # Correct ownership to ubuntu
+  group   => 'ubuntu',  # Correct group to ubuntu
+  mode    => '0644',
   content => '<html>
   <head>
   </head>
@@ -34,56 +52,49 @@ file { '/data/web_static/releases/test/index.html':
     Holberton School
   </body>
 </html>',
-  owner  => 'root',
-  group  => 'root',
-  mode   => '0644',
 }
 
-# Ensure /data/web_static/current exists
+# Create symbolic link
 file { '/data/web_static/current':
-  ensure => 'link',
-  target => '/data/web_static/releases/test',
-  owner  => 'root',
-  group  => 'root',
+  ensure  => 'link',
+  target  => '/data/web_static/releases/test',
+  owner   => 'ubuntu',  # Correct ownership to ubuntu
+  group   => 'ubuntu',  # Correct group to ubuntu
 }
 
-# Ensure Nginx configuration is updated
+# Update Nginx configuration
 file { '/etc/nginx/sites-available/default':
-  ensure => 'file',
+  ensure  => 'file',
+  owner   => 'root',
+  group   => 'root',
+  mode    => '0644',
   content => "server {
     listen 80 default_server;
     listen [::]:80 default_server;
-
-    server_name _;
+    add_header X-Served-By $HOSTNAME;
+    root   /var/www/html;
+    index  index.html index.htm;
 
     location /hbnb_static {
         alias /data/web_static/current;
         index index.html index.htm;
     }
 
-    location / {
-        add_header X-Served-By $hostname;
-        proxy_pass http://127.0.0.1:5000;
+    location /redirect_me {
+        return 301 http://cuberule.com/;
     }
 
     error_page 404 /404.html;
     location /404 {
-        root /usr/share/nginx/html;
-        internal;
+      root /var/www/html;
+      internal;
     }
-
-    location /redirect_me {
-        rewrite ^/redirect_me /;
-        rewrite ^/redirect_me /;
-    }
-}
-",
-  notify => Service['nginx'],
+}",
 }
 
-# Notify Nginx to restart if the configuration is updated
+# Restart Nginx
 service { 'nginx':
-  ensure  => 'running',
-  enable  => true,
-  require => File['/etc/nginx/sites-available/default'],
+  ensure    => 'running',
+  enable    => true,
+  subscribe => File['/etc/nginx/sites-available/default'],
 }
