@@ -1,23 +1,31 @@
 #!/usr/bin/python3
+"""
+Fabric script for deploying web_static content to web servers.
+"""
+
 from fabric.api import env, put, run
 from os.path import exists
 
+# Define the hosts and SSH key
 env.hosts = ['172.17.0.3', 'WEB_01_IP_PLACEHOLDER', 'WEB_02_IP_PLACEHOLDER']
 env.key_filename = '/root/.ssh/id_rsa'  # Use the full path to your private key
 
 def do_deploy(archive_path):
-    """Distributes an archive to your web servers.
+    """
+    Deploy the web_static content to the web servers.
 
     Args:
-        archive_path (str): The path to the archive file.
+        archive_path (str): Path to the archive file to deploy.
 
     Returns:
-        bool: True if successful, False otherwise.
+        bool: True if deployment is successful, False otherwise.
     """
+    # Check if the archive file exists
     if not exists(archive_path):
         print("Error: Archive file does not exist.")
         return False
 
+    # Extract file name and folder name from the archive path
     file_name = archive_path.split('/')[-1]
     folder_name = file_name.split('.')[0]
 
