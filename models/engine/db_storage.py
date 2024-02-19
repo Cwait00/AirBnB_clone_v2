@@ -2,7 +2,7 @@
 """ new class for sqlAlchemy """
 from os import getenv
 from sqlalchemy.orm import sessionmaker, scoped_session
-from sqlalchemy import (create_engine)
+from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from models.base_model import Base
 from models.state import State
@@ -52,33 +52,30 @@ class DBStorage:
                 for elem in query:
                     key = "{}.{}".format(type(elem).__name__, elem.id)
                     dic[key] = elem
-        return (dic)
+        return dic
 
     def new(self, obj):
-        """add a new element in the table
-        """
+        """add a new element in the table"""
         self.__session.add(obj)
 
     def save(self):
-        """save changes
-        """
+        """save changes"""
         self.__session.commit()
 
     def delete(self, obj=None):
-        """delete an element in the table
-        """
+        """delete an element in the table"""
         if obj:
-            self.session.delete(obj)
+            self.__session.delete(obj)
 
     def reload(self):
-        """configuration
-        """
+        """configuration"""
         Base.metadata.create_all(self.__engine)
         sec = sessionmaker(bind=self.__engine, expire_on_commit=False)
         Session = scoped_session(sec)
         self.__session = Session()
 
     def close(self):
-        """ calls remove()
-        """
+        """Close the current session and create a new one"""
         self.__session.remove()
+        self.reload()  # Create a new session after closing
+
